@@ -48,6 +48,60 @@ _SUPPLY_RESOLVED_DIGITS = 4
 class Keysight_E3631A():
     """ This is a class that acts as a control for the 
     Keysight_E3631A power supply.
+
+    Attributes
+    ----------
+    P6V_voltage : property(float)
+        The attribute that controls the P6V output voltage on the 
+        power supply.
+    P6V_current : property(float)
+        The attribute that controls the P6V output current on the 
+        power supply.
+    P25V_voltage : property(float)
+        The attribute that controls the P25V output voltage on the 
+        power supply.
+    P25V_current : property(float)
+        The attribute that controls the P25V output current on the 
+        power supply.
+    N25V_voltage : property(float)
+        The attribute that controls the N25V output voltage on the 
+        power supply.
+    N25V_current : property(float)
+        The attribute that controls the N25V output current on the 
+        power supply.
+
+    MIN_P6V_VOLTAGE : float
+        The minimum instance limitation for P6V voltages.
+    MAX_P6V_VOLTAGE : float
+        The maximum instance limitation for P6V voltages.
+    MIN_P25V_VOLTAGE : float
+        The minimum instance limitation for P25V voltages.
+    MAX_P25V_VOLTAGE : float
+        The maximum instance limitation for P25V voltages.
+    MIN_N25V_VOLTAGE : float
+        The minimum instance limitation for N25V voltages.
+    MAX_N25V_VOLTAGE : float
+        The maximum instance limitation for N25V voltages.
+
+    MIN_P6V_CURRENT : float
+        The minimum instance limitation for P6V currents.
+    MAX_P6V_CURRENT : float
+        The maximum instance limitation for P6V currents.
+    MIN_P25V_CURRENT : float
+        The minimum instance limitation for P25V currents.
+    MAX_P25V_CURRENT : float
+        The maximum instance limitation for P25V currents.
+    MIN_N25V_CURRENT : float
+        The minimum instance limitation for N25V currents.
+    MAX_N25V_CURRENT : float
+        The maximum instance limitation for N25V currents.
+
+    local : function
+        Alias to `Keysight_E3631A.local_mode()`
+    remote : function
+        Alias to `Keysight_E3631A.remote_mode()`
+    command, send, write : function
+        Aliases to `Keysight_E3631A.send_scpi_command()`
     """
 
     # Internal implimentation values.
@@ -67,10 +121,56 @@ class Keysight_E3631A():
     _serial_end = int()
     _serial_timeout = int()
 
+    # These values are user created limitations to the output of the
+    # power supply for each individual power supply instance. 
+    # Default to the factory limitations.
+    MIN_P6V_VOLTAGE = copy.deepcopy(_FACTORY_MIN_P6V_VOLTAGE)
+    MAX_P6V_VOLTAGE = copy.deepcopy(_FACTORY_MAX_P6V_VOLTAGE)
+    MIN_P25V_VOLTAGE = copy.deepcopy(_FACTORY_MIN_P25V_VOLTAGE)
+    MAX_P25V_VOLTAGE = copy.deepcopy(_FACTORY_MAX_P25V_VOLTAGE)
+    MIN_N25V_VOLTAGE = copy.deepcopy(_FACTORY_MIN_N25V_VOLTAGE)
+    MAX_N25V_VOLTAGE = copy.deepcopy(_FACTORY_MAX_N25V_VOLTAGE)
+
+    MIN_P6V_CURRENT = copy.deepcopy(_FACTORY_MIN_P6V_CURRENT)
+    MAX_P6V_CURRENT = copy.deepcopy(_FACTORY_MAX_P6V_CURRENT)
+    MIN_P25V_CURRENT = copy.deepcopy(_FACTORY_MIN_P25V_CURRENT)
+    MAX_P25V_CURRENT = copy.deepcopy(_FACTORY_MAX_P25V_CURRENT)
+    MIN_N25V_CURRENT = copy.deepcopy(_FACTORY_MIN_N25V_CURRENT)
+    MAX_N25V_CURRENT = copy.deepcopy(_FACTORY_MAX_N25V_CURRENT)
+
+
     def __init__(self, port, baudrate=9600, parity=None, data=8,
                  timeout=DEFAULT_TIMEOUT, _sound=True):
         """ Creating the power supply instance. If successful, the 
         power supply will be put into remote mode automatically.
+        It will also send a few test commands and beep.
+
+        Parameters
+        ----------
+        port : string
+            The port string, value, or name that the power supply
+            is connected to.
+        baudrate : int
+            The baudrate that the power supply is set to. Default
+            from the factory is 9600.
+        parity : string
+            The parity bit setting the power supply is set to. Must
+            be one of the following: 'none' (factory default), 'even'
+            'odd'.
+        data : int
+            The data bit setting the power supply is set to. Factory
+            default is 8.
+        timeout : int
+            The timeout, in seconds, that this class will wait for
+            a responce from the power supply when a command is sent.
+            Default is an axiomatic 15 seconds.
+        _sound : boolean (optional)
+            The power supply will not send the test beeps if this
+            is False. Defaults to True.
+
+        Returns
+        -------
+        None
         """
         # Assign parity based on entry.
         parity = str(parity).lower() if (parity is not None) else 'none'
@@ -85,6 +185,14 @@ class Keysight_E3631A():
             # instrument.
             raise ValueError("The parity must be either: "
                              "'none', 'even', or 'odd'.")
+                        
+        # Ensure that the timeout value is at least one second.
+        if (timeout < 1.0):
+            # We will force it to be the default.
+            warnings.warn("The timeout must be at least 1 second. Choosing "
+                          "default of 15 seconds.",
+                          RuntimeWarning, stacklevel=2)
+            timeout = DEFAULT_TIMEOUT
 
         # Assign the serial connection information.
         self._serial_port = str(port)
@@ -129,6 +237,15 @@ class Keysight_E3631A():
     # Sends a beep command.
     def beep(self):
         """ Sends a beep command to the power supply.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply.
         """
         # The beep scpi command.
         beep_command = 'SYSTem:BEEPer:IMMediate'
@@ -141,10 +258,61 @@ class Keysight_E3631A():
     def version(self):
         """ This sends a command to fetch the current version of
         the SCPI protocol.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply, here it is likely
+            the version number.
         """
         # Send the command.
         version_command = 'SYSTem:VERSion?'
         responce = self.send_scpi_command(command=version_command)
+        # All done.
+        return responce
+
+    # SCPI command to fetch the first error in the queue.
+    def error(self):
+        """ This sends a command to fetch the current error. The 
+        error queue is a first-in-first-out type of queue. A
+        maximum of 20 errors can be stored in the error queue.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply, here it is likely
+            the current error.
+        """
+        # Send the command.
+        error_command = 'SYSTem:ERRor?'
+        responce = self.send_scpi_command(command=error_command)
+        # All done.
+        return responce
+    # SCPI command to clear the entire register.
+    def clear(self):
+        """ This sends a command to clear the current register, 
+        including clearing out errors. 
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply.
+        """
+        # Send the command.
+        clear_command = '*CLS'
+        responce = self.send_scpi_command(command=clear_command)
         # All done.
         return responce
 
@@ -153,7 +321,17 @@ class Keysight_E3631A():
     def remote_mode(self):
         """ This function sends a command to the power supply to 
         put it in remote mode. Remote mode means it is controlled by 
-        this class. """
+        this class. 
+        
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply.
+        """
         # Send the remote mode command to the power supply.
         remote_command = 'SYSTem:REMote'
         responce = self.send_scpi_command(command=remote_command)
@@ -163,6 +341,15 @@ class Keysight_E3631A():
         """ This function sends a command to the power supply to 
         put it in local mode. Local mode means it is controlled by 
         the front interface.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply.
         """
         # Send the local mode command to the power supply.
         local_command = 'SYSTem:LOCal'
@@ -228,6 +415,17 @@ class Keysight_E3631A():
                              "P6V output: {min} <= V <= {max}."
                              .format(volt=volt, min=USER_MIN_P6V_VOLTAGE, 
                                      max=USER_MAX_P6V_VOLTAGE))
+        # Ensure that the voltage value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_P6V_VOLTAGE <= volt <= self.MAX_P6V_VOLTAGE):
+            # The voltage is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted voltage value is {volt}. This "
+                             "is outside the instance limitations for the "
+                             "P6V output: {min} <= V <= {max}."
+                             .format(volt=volt, min=self.MIN_P6V_VOLTAGE, 
+                                     max=self.MAX_P6V_VOLTAGE))
         # The power supply only supports a rounded voltage value to
         # the 3rd decimal point.
         volt = round(volt, _SUPPLY_RESOLVED_DIGITS)
@@ -293,7 +491,7 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the factory specifications for the "
-                             "P6V output: {min} <= A <= {max}."
+                             "P6V output: {min} <= I <= {max}."
                              .format(curr=curr, min=_FACTORY_MIN_P6V_CURRENT, 
                                      max=_FACTORY_MAX_P6V_CURRENT))
         # Ensure that the current value is not outside the user 
@@ -304,9 +502,20 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the user limitations for the "
-                             "P6V output: {min} <= V <= {max}."
+                             "P6V output: {min} <= I <= {max}."
                              .format(curr=curr, min=USER_MIN_P6V_CURRENT, 
                                      max=USER_MAX_P6V_CURRENT))
+        # Ensure that the current value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_P6V_CURRENT <= curr <= self.MAX_P6V_CURRENT):
+            # The current is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted current value is {curr}. This "
+                             "is outside the instance limitations for the "
+                             "P6V output: {min} <= I <= {max}."
+                             .format(curr=curr, min=self.MIN_P6V_CURRENT, 
+                                     max=self.MAX_P6V_CURRENT))
         # The power supply only supports a rounded current value to
         # the 3rd decimal point.
         curr = round(curr, _SUPPLY_RESOLVED_DIGITS)
@@ -388,6 +597,17 @@ class Keysight_E3631A():
                              "P25V output: {min} <= V <= {max}."
                              .format(volt=volt, min=USER_MIN_P25V_VOLTAGE, 
                                      max=USER_MAX_P25V_VOLTAGE))
+        # Ensure that the voltage value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_P25V_VOLTAGE <= volt <= self.MAX_P25V_VOLTAGE):
+            # The voltage is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted voltage value is {volt}. This "
+                             "is outside the instance limitations for the "
+                             "P25V output: {min} <= V <= {max}."
+                             .format(volt=volt, min=self.MIN_P25V_VOLTAGE, 
+                                     max=self.MAX_P25V_VOLTAGE))
         # The power supply only supports a rounded voltage value to
         # the 3rd decimal point.
         volt = round(volt, _SUPPLY_RESOLVED_DIGITS)
@@ -453,7 +673,7 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the factory specifications for the "
-                             "P25V output: {min} <= A <= {max}."
+                             "P25V output: {min} <= I <= {max}."
                              .format(curr=curr, min=_FACTORY_MIN_P25V_CURRENT, 
                                      max=_FACTORY_MAX_P25V_CURRENT))
         # Ensure that the current value is not outside the user 
@@ -464,9 +684,20 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the user limitations for the "
-                             "P25V output: {min} <= V <= {max}."
+                             "P25V output: {min} <= I <= {max}."
                              .format(curr=curr, min=USER_MIN_P25V_CURRENT, 
                                      max=USER_MAX_P25V_CURRENT))
+        # Ensure that the current value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_P25V_CURRENT <= curr <= self.MAX_P25V_CURRENT):
+            # The current is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted current value is {curr}. This "
+                             "is outside the instance limitations for the "
+                             "P25V output: {min} <= I <= {max}."
+                             .format(curr=curr, min=self.MIN_P25V_CURRENT, 
+                                     max=self.MAX_P25V_CURRENT))
         # The power supply only supports a rounded current value to
         # the 3rd decimal point.
         curr = round(curr, _SUPPLY_RESOLVED_DIGITS)
@@ -548,6 +779,17 @@ class Keysight_E3631A():
                              "N25V output: {min} <= V <= {max}."
                              .format(volt=volt, min=USER_MAX_N25V_VOLTAGE, 
                                      max=USER_MAX_N25V_VOLTAGE))
+        # Ensure that the voltage value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_N25V_VOLTAGE <= volt <= self.MAX_N25V_VOLTAGE):
+            # The voltage is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted voltage value is {volt}. This "
+                             "is outside the instance limitations for the "
+                             "N25V output: {min} <= V <= {max}."
+                             .format(volt=volt, min=self.MIN_N25V_VOLTAGE, 
+                                     max=self.MAX_N25V_VOLTAGE))
         # The power supply only supports a rounded voltage value to
         # the 3rd decimal point.
         volt = round(volt, _SUPPLY_RESOLVED_DIGITS)
@@ -613,7 +855,7 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the factory specifications for the "
-                             "N25V output: {min} <= A <= {max}."
+                             "N25V output: {min} <= I <= {max}."
                              .format(curr=curr, min=_FACTORY_MIN_N25V_CURRENT, 
                                      max=_FACTORY_MAX_N25V_CURRENT))
         # Ensure that the current value is not outside the user 
@@ -624,9 +866,20 @@ class Keysight_E3631A():
         else:
             raise ValueError("The attempted current value is {curr}. This "
                              "is outside the user limitations for the "
-                             "N25V output: {min} <= V <= {max}."
+                             "N25V output: {min} <= I <= {max}."
                              .format(curr=curr, min=USER_MIN_N25V_CURRENT, 
                                      max=USER_MAX_N25V_CURRENT))
+        # Ensure that the current value is not outside the object 
+        # instance defined limits.
+        if (self.MIN_N25V_CURRENT <= curr <= self.MAX_N25V_CURRENT):
+            # The current is within the instance's limit.
+            pass
+        else:
+            raise ValueError("The attempted current value is {curr}. This "
+                             "is outside the instance limitations for the "
+                             "N25V output: {min} <= I <= {max}."
+                             .format(curr=curr, min=self.MIN_N25V_CURRENT, 
+                                     max=self.MAX_N25V_CURRENT))
         # The power supply only supports a rounded current value to
         # the 3rd decimal point.
         curr = round(curr, _SUPPLY_RESOLVED_DIGITS)
@@ -657,6 +910,16 @@ class Keysight_E3631A():
     def selected_output(self):
         """ This function sends a command to the instrument to
         see what is the current specified active output.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply, here it is the output 
+            that is currently selected.
         """
         # The command to get the current selected output.
         output_select_command = 'INSTrument:SELect?'
@@ -674,7 +937,18 @@ class Keysight_E3631A():
 
         The newline characters are automatically added to the 
         command sent and removed from the responce returned. Treat
-        the input and output as normal SCPI ASCII strings.
+        the input and output as normal strings.
+
+        Parameters
+        ----------
+        command : string
+            The SCPI command to be sent to the power supply.
+
+        Returns
+        -------
+        responce : string
+            The responce from the power supply from the provided 
+            command.
         """
         # The command must be suffixed with a new line for the 
         # power supply to properly recognize it.
