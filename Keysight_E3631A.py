@@ -474,7 +474,7 @@ class Keysight_E3631A():
                           "prevent this behavior. \n "
                           "Class: {cls_curr}  Power Supply: {ps_curr}"
                           .format(cls_curr=self._P6V_current,
-                                  ps_volt=supply_current))
+                                  ps_curr=supply_current))
         assert assert_bool, assert_message
         # All good, as they are close, it does not matter which is 
         # returned.
@@ -656,7 +656,7 @@ class Keysight_E3631A():
                           "prevent this behavior. \n "
                           "Class: {cls_curr}  Power Supply: {ps_curr}"
                           .format(cls_curr=self._P25V_current,
-                                  ps_volt=supply_current))
+                                  ps_curr=supply_current))
         assert assert_bool, assert_message
         # All good, as they are close, it does not matter which is 
         # returned.
@@ -759,25 +759,25 @@ class Keysight_E3631A():
         """
         # Ensure that the voltage value is not outside the 
         # power supply's manufacture's limit.
-        if (_FACTORY_MAX_N25V_VOLTAGE <= volt <= _FACTORY_MAX_N25V_VOLTAGE):
+        if (_FACTORY_MIN_N25V_VOLTAGE <= volt <= _FACTORY_MAX_N25V_VOLTAGE):
             # The voltage is within the manufacture's limit.
             pass
         else:
             raise ValueError("The attempted voltage value is {volt}. This "
                              "is outside the factory specifications for the "
                              "N25V output: {min} <= V <= {max}."
-                             .format(volt=volt, min=_FACTORY_MAX_N25V_VOLTAGE, 
+                             .format(volt=volt, min=_FACTORY_MIN_N25V_VOLTAGE, 
                                      max=_FACTORY_MAX_N25V_VOLTAGE))
         # Ensure that the voltage value is not outside the user 
         # defined limits.
-        if (USER_MAX_N25V_VOLTAGE <= volt <= USER_MAX_N25V_VOLTAGE):
+        if (USER_MIN_N25V_VOLTAGE <= volt <= USER_MAX_N25V_VOLTAGE):
             # The voltage is within the users's limit.
             pass
         else:
             raise ValueError("The attempted voltage value is {volt}. This "
                              "is outside the user limitations for the "
                              "N25V output: {min} <= V <= {max}."
-                             .format(volt=volt, min=USER_MAX_N25V_VOLTAGE, 
+                             .format(volt=volt, min=USER_MIN_N25V_VOLTAGE, 
                                      max=USER_MAX_N25V_VOLTAGE))
         # Ensure that the voltage value is not outside the object 
         # instance defined limits.
@@ -838,7 +838,7 @@ class Keysight_E3631A():
                           "prevent this behavior. \n "
                           "Class: {cls_curr}  Power Supply: {ps_curr}"
                           .format(cls_curr=self._N25V_current,
-                                  ps_volt=supply_current))
+                                  ps_curr=supply_current))
         assert assert_bool, assert_message
         # All good, as they are close, it does not matter which is 
         # returned.
