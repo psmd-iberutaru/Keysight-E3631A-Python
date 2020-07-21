@@ -30,11 +30,30 @@ Nevertheless, which ever method is used, the class `Keysight_E3631A` is what is 
 
 ### Create class and connect
 You need to know which port your power supply is connected to. You can get a list of available serial ports with: `python  -m  serial.tools.list_ports`
-Once you have determined which port your instrument is connected to, you can create your class.
+Once you have determined which port your instrument is connected to, you can create your class. 
 ```python
 import Keysight_E3631A as keysight
 power_supply = keysight.Keysight_E3631A(port='port_name', 
 	baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
+```
+
+You can also create a class using a configuration dictionary containing the terms key-value described below. The proper way to create a class using a configuration dictionary is described below: (This also allows you to use a configuration file through [configparser](https://docs.python.org/3/library/configparser.html) or similar packages.)
+```python
+import Keysight_E3631A as keysight
+
+serial_dict = {'port':'port_name', 'baudrate':9600, 
+	       'parity':'none', 'data':8, 'timeout':2}
+limit_dict = {'MIN_P6V_VOLTAGE':0.0,
+              'MAX_P6V_VOLTAGE':6.0,
+              'MIN_P25V_VOLTAGE':0.0,
+              'MAX_P25V_VOLTAGE':25.0,
+              'MIN_N25V_VOLTAGE':-25.0,
+              'MAX_N25V_VOLTAGE':0.0}
+# Combine the two.
+config_dict = {**serial_dict, **limit_dict}
+
+
+power_supply = keysight.Keysight_E3631A.load_configuration(config_dict, _flat=False)
 ```
 
 Here, the terms mean:
