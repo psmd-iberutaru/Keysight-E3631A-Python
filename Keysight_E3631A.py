@@ -102,6 +102,8 @@ class Keysight_E3631A():
         Alias to `Keysight_E3631A.remote_mode()`
     command, send, write : function
         Aliases to `Keysight_E3631A.send_scpi_command()`
+    _raw, _send_raw : function
+        Aliases to `_send_raw_scpi_command()`
     """
 
     # Internal implimentation values.
@@ -215,7 +217,7 @@ class Keysight_E3631A():
                           "The instrument may not be communicating back "
                           "with this class. Some functions may fail."
                           .format(port=self._serial_port),
-                          RuntimeWarning, stacklevel=1)
+                          RuntimeWarning, stacklevel=2)
         else:
             # Set the system into remote mode.
             __ = self.remote_mode()
@@ -233,6 +235,99 @@ class Keysight_E3631A():
             pass
         # All done?
         return None
+
+    # This allows a configuration dictionary to be used.
+    @classmethod
+    def load_configuration(self, configuration, _flat=False):
+        """ This is a function that allows the usage of a 
+        dictionary to specify the parameters of the class. The 
+        configuration file can be found in the repository.
+
+        Parameters
+        ----------
+        configuration : dictionary-like
+            The configuration dictionary. It must contain the 
+            required parameters, else an error will be raised. If
+            the limitation paramters are not there, the factory
+            defaults will be used instead.
+        _flat : boolean (optional)
+            Flaten the dictionary before processing. Defaults to 
+            False.
+
+        Returns
+        -------
+        power_supply : Keysight_E3631A
+            A Keysight_E3631A class based on the configuration
+            parameters.
+        """
+        # Flatten the dictionary.
+        if (_flat):
+            config = _ravel_dictionary(
+                dictionary=dict(configuration), conflict='raise')
+        else:
+            config = dict(configuration)
+
+        # Attempt to obtain the serial parameters.
+        try:
+            port = config['port']
+            baudrate = config['baudrate']
+            parity = config['parity']
+            data = config['data']
+            timeout = config['timeout']
+        except KeyError:
+            raise KeyError("The serial parameters are missing. Required are "
+                           "the following: 'port', 'baudrate', 'parity', "
+                           "'data' and 'timeout'.")
+        # Attempt to obtain the limitation parameters. Default to
+        # factory. 
+        MIN_P6V_VOLTAGE = config.get('MIN_P6V_VOLTAGE', 
+                                     _FACTORY_MIN_P6V_VOLTAGE)
+        MAX_P6V_VOLTAGE = config.get('MAX_P6V_VOLTAGE', 
+                                   _FACTORY_MAX_P6V_VOLTAGE)
+        MIN_P25V_VOLTAGE = config.get('MIN_P25V_VOLTAGE', 
+                                      _FACTORY_MIN_P25V_VOLTAGE)
+        MAX_P25V_VOLTAGE = config.get('MAX_P25V_VOLTAGE', 
+                                      _FACTORY_MAX_P25V_VOLTAGE)
+        MIN_N25V_VOLTAGE = config.get('MIN_N25V_VOLTAGE', 
+                                      _FACTORY_MIN_N25V_VOLTAGE)
+        MAX_N25V_VOLTAGE = config.get('MAX_N25V_VOLTAGE', 
+                                      _FACTORY_MAX_N25V_VOLTAGE)
+
+        MIN_P6V_CURRENT = config.get('MIN_P6V_CURRENT', 
+                                    _FACTORY_MIN_P6V_CURRENT)
+        MAX_P6V_CURRENT = config.get('MAX_P6V_CURRENT', 
+                                      _FACTORY_MAX_P6V_CURRENT)
+        MIN_P25V_CURRENT = config.get('MIN_P25V_CURRENT', 
+                                      _FACTORY_MIN_P25V_CURRENT)
+        MAX_P25V_CURRENT = config.get('MAX_P25V_CURRENT', 
+                                      _FACTORY_MAX_P25V_CURRENT)
+        MIN_N25V_CURRENT = config.get('MIN_N25V_CURRENT', 
+                                      _FACTORY_MIN_N25V_CURRENT)
+        MAX_N25V_CURRENT = config.get('MAX_N25V_CURRENT', 
+                                      _FACTORY_MAX_N25V_CURRENT)
+
+        # Create the instance.
+        power_supply = Keysight_E3631A(port=port, baudrate=baudrate,
+                                       parity=parity, data=data, 
+                                       timeout=timeout)
+
+        # Assign the limitations.
+        power_supply.MIN_P6V_VOLTAGE = MIN_P6V_VOLTAGE
+        power_supply.MAX_P6V_VOLTAGE = MAX_P6V_VOLTAGE
+        power_supply.MIN_P25V_VOLTAGE = MIN_P25V_VOLTAGE
+        power_supply.MAX_P25V_VOLTAGE = MAX_P25V_VOLTAGE
+        power_supply.MIN_N25V_VOLTAGE = MIN_N25V_VOLTAGE
+        power_supply.MAX_N25V_VOLTAGE = MAX_N25V_VOLTAGE
+
+        power_supply.MIN_P6V_CURRENT = MIN_P6V_CURRENT
+        power_supply.MAX_P6V_CURRENT = MAX_P6V_CURRENT
+        power_supply.MIN_P25V_CURRENT = MIN_P25V_CURRENT
+        power_supply.MAX_P25V_CURRENT = MAX_P25V_CURRENT
+        power_supply.MIN_N25V_CURRENT = MIN_N25V_CURRENT
+        power_supply.MAX_N25V_CURRENT = MAX_N25V_CURRENT
+
+        return power_supply
+    
 
     # Sends a beep command.
     def beep(self):
@@ -929,7 +1024,7 @@ class Keysight_E3631A():
 
     # These functions handle the command interface of the serial
     # connection.
-    def send_scpi_command(self, command):
+    def send_scpi_command(self, command, _escape=False):
         """ This function is a wrapper around sending a scpi command
         to the power supply. It performs internal checks to ensure 
         that the command send it proper. However, there are no
@@ -943,6 +1038,8 @@ class Keysight_E3631A():
         ----------
         command : string
             The SCPI command to be sent to the power supply.
+        _escape : boolean (optional)
+            Setting this to True disables error checking.
 
         Returns
         -------
@@ -952,11 +1049,11 @@ class Keysight_E3631A():
         """
         # The command must be suffixed with a new line for the 
         # power supply to properly recognize it.
-        command = ''.join([command, '\n'])
+        newline_command = ''.join([command, '\n'])
 
         # The most cross-platform solution is to just use the
         # default bytestring. Windows does not like simple strings.
-        byte_command = bytearray(command, sys.getdefaultencoding())
+        byte_command = bytearray(newline_command, sys.getdefaultencoding())
         # Send the command and read back the responce.
         raw_responce = self._send_raw_scpi_command(bytestring=byte_command)
         responce = str(raw_responce.decode())
@@ -967,8 +1064,50 @@ class Keysight_E3631A():
         else:
             responce = responce
 
-        # All done.
-        return responce
+        # This allows for the skipping of an error check.
+        # It should be used for internal use only.
+        if (_escape):
+            return responce
+        else:
+            # Test if the command instead created an error. If
+            # it did, return the error instead.
+            no_error_string = '+0,"No error"'
+            if (responce == no_error_string):
+                # This is needed to prevent an infinite loop 
+                # as there would otherwise be infinite validation
+                # on self.error()
+                error_message = no_error_string
+                return responce
+            else:
+                # We are in checking mode, we don't need to
+                # firmly check for error on error.
+                error_message = self.send_scpi_command(
+                    command='SYSTem:ERRor?', _escape=True)
+                # Check if the error message is blank.
+                if (len(error_message) == 0):
+                    # There was no responce?
+                    warnings.warn("The error responce is blank. The "
+                                  "power supply may not be responding.",
+                                  RuntimeWarning, stacklevel=2)
+                    print('No responce?')
+                    # There is no point in continuing.
+                    return responce
+            # Check the error message.
+            if (error_message == no_error_string):
+                # There is no error.
+                return responce
+            else:
+                # There is likely an error. Return it instead,
+                warnings.warn("The power supply has an error from this "
+                              "last command: `{cmd}`. \n"
+                              "The error string is returned instead."
+                              .format(cmd=command), 
+                              RuntimeWarning, stacklevel=2)
+                return error_message
+        # The code should not reach here.
+        raise RuntimeError('The error checking failed.')
+        return None
+
     def _send_raw_scpi_command(self, bytestring):
         """ This function sends a remote command to the power supply
         for it to execute. No internet checks are done. This is 
@@ -1009,10 +1148,9 @@ class Keysight_E3631A():
         # All done. Output the responce.
         return responce
 
-
-        # The apply command is the easiest way to set voltages and 
     # Aliases.
     command = send = write = send_scpi_command
+    _raw = _send_raw = _send_raw_scpi_command
     
     # Internal consistency function for the voltage property 
     # interfaces.
@@ -1064,3 +1202,97 @@ class Keysight_E3631A():
                                      volt=voltage_str, curr=current_str))
         # All done.
         return apply_command
+
+def _ravel_dictionary(dictionary, conflict):
+    """ This function unravels a dictionary, un-nesting
+    nested dictionaries into a single dictionary. If
+    conflicts arise, then the conflict rule is used.
+    
+    The keys of dictionary entries that have dictionary
+    values are discarded.
+    
+    Parameters
+    ----------
+    dictionary : dictionary
+        The dictionary to be unraveled.
+    conflict : string
+        The conflict rule. It may be one of these:
+        
+        * 'raise'
+            If a conflict is detected, a 
+            sparrowcore.DataError will be raised.
+        * 'superior'
+            If there is a conflict, the least 
+            nested dictionary takes precedence. Equal
+            levels will prioritize via alphabetical. 
+        * 'inferior'
+            If there is a conflict, the most
+            nested dictionary takes precedence. Equal
+            levels will prioritize via anti-alphabetical.
+        
+    Returns
+    -------
+    raveled_dictionary : dictionary
+        The unraveled dictionary. Conflicts were replaced
+        using the conflict rule.
+    """
+    # Reaffirm that this is a dictionary.
+    if (not isinstance(dictionary, dict)):
+        dictionary = dict(dictionary)
+    else:
+        # All good.
+        pass
+    # Ensure the conflict is a valid conflict type.
+    conflict = str(conflict).lower()
+    if (conflict not in ('raise', 'superior', 'inferior')):
+        raise RuntimeError("The conflict parameter must be one the "
+                           "following: 'raise', 'superior', 'inferior'.")
+        
+    # The unraveled dictionary.
+    raveled_dictionary = dict()
+    # Sorted current dictionary. This sorting helps
+    # with priorities prescribed by `conflict`.
+    sorted_dictionary = dict(sorted(dictionary.items()))
+    for keydex, itemdex in sorted_dictionary.items():
+        # If this entry is a dictionary, then 
+        # recursively go through it like a tree search.
+        if (isinstance(itemdex, dict)):
+            temp_dict = _ravel_dictionary(
+                dictionary=itemdex, conflict=conflict)
+        else:
+            # It is a spare item, create a dictionary.
+            temp_dict = {keydex:itemdex}
+        # Combine the dictionary, but, first, check for
+        # intersection conflicts.
+        if (len(raveled_dictionary.keys() & temp_dict.keys()) != 0):
+            # There are intersections. Handle them based 
+            # on `conflict`.
+            if (conflict == 'raise'):
+                raise RuntimeError("There are conflicts in these two "
+                                   "dictionaries: \n"
+                                   "Temp : {temp} \n Ravel : {ravel}"
+                                   .format(temp=temp_dict, 
+                                           ravel=raveled_dictionary))
+            elif (conflict == 'superior'):
+                # Preserve the previous entries as they are
+                # either higher up in the tree or are
+                # ahead alphabetically.
+                raveled_dictionary = {**temp_dict, **raveled_dictionary}
+            elif (conflict == 'inferior'):
+                # Preserve the new entires as they are
+                # either lower in the tree or are behind
+                # alphabetically.
+                raveled_dictionary = {**raveled_dictionary, **temp_dict}
+            else:
+                # The code should not get here.
+                raise RuntimeError("The input checking of conflict "
+                                   "should have caught this.")
+        else:
+            # They can just be combined as normal. Taking superior
+            # as the default.
+            raveled_dictionary = {**temp_dict, **raveled_dictionary}
+            
+    # All done.
+    return raveled_dictionary
+
+
