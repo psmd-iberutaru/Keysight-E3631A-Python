@@ -83,7 +83,7 @@ The `Keysight_E3631A()`  class can interface with all three outputs using the cl
  - **+25V**
 	 - Voltage:`Keysight_E3631A.P25V_voltage`
 	 - Current: `Keysight_E3631A.P25V_current`
--  **+6V**
+-  **-25V**
 	 - Voltage:`Keysight_E3631A.N25V_voltage`
 	 - Current: `Keysight_E3631A.N25V_current`
 
